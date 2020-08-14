@@ -1,0 +1,16 @@
+{
+	"env": {
+		"test3": {
+			"normal-comment": 50, // Hello, I should not be visible
+			/* Hello, I should not be visible, nor the fields below
+			"comment-block1": "Should be invisible (1)",
+			"comment-block2": "Should be invisible (2)",
+			*/
+			"after-comment-block": "Should be visible"
+		}
+	}
+}
+
+
+
+

@@ -1,0 +1,14 @@
+{
+	"env": {
+		"test2": {
+			"test-of-env-int1": 50,
+			"test-of-env-int2" : null,
+			"test-of-env-str1": "Hello my name is",
+			"test-of-env-str3": null
+		}
+	}
+}
+
+
+
+
