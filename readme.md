@@ -1,7 +1,5 @@
 Property configurator
 -
-<strong>Work in progress! No release has been done yet</strong><br>
-
 This module handles property/environmental variables for default Java, `application.properties` like files that are used in Spring-boot (profiles can still be used), 
 or `conf/config.json` files that may exist for Vertx. Also added support for `.json5` files to support comments in JSON files.
 
