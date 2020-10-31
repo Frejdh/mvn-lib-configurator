@@ -1,5 +1,7 @@
 package com.frejdh.util.environment;
 
+import com.frejdh.util.environment.watcher.DirectoryWatcher;
+import com.frejdh.util.environment.watcher.DirectoryWatcherBuilder;
 import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.util.HashMap;
@@ -26,11 +28,17 @@ public class Config {
 	private static final java.util.Properties environmentVariables = new java.util.Properties(System.getProperties());
 	private static final Set<String> filesToLoad = new HashSet<>();
 	private static volatile boolean isRuntimeEnabled;
+	private static volatile DirectoryWatcher directoryWatcher = null;
 
 	static {
 		setDefaultFilesToLoad();
 		loadEnvironmentVariables(false);
 		loadAdditionalConfigFiles();
+
+		if (get("property.runtime.enabled", false, Boolean.class, false)) {
+			Config.directoryWatcher = new DirectoryWatcherBuilder()
+					.build();
+		}
 	}
 
 	/**
@@ -75,7 +83,6 @@ public class Config {
 				loadVariablesFromFiles();
 				loadVariablesFromProgram();
 				isInitialized = true;
-				setRuntimeEnabled(get("property.runtime.enabled", false, Boolean.class, false));
 			}
 		}
 	}

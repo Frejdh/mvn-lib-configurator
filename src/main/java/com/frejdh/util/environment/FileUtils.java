@@ -4,6 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 class FileUtils {
 
@@ -33,6 +39,30 @@ class FileUtils {
 			return result.toString(StandardCharsets.UTF_8.name());
 		} catch (NullPointerException | IOException e ) {
 			return null;
+		}
+
+	}
+
+	public static class DirectoryAndFiles {
+		public final Path directory;
+		public final Set<String> files = new HashSet<>();
+
+		public DirectoryAndFiles(Path directory, String file) {
+			this.directory = directory;
+			this.files.add(file);
+		}
+
+		public DirectoryAndFiles(Path directory, Collection<String> filenames) {
+			this.directory = directory;
+			this.files.addAll(filenames);
+		}
+
+		public DirectoryAndFiles(String directory, String file) {
+			this(FileSystems.getDefault().getPath(directory), file);
+		}
+
+		public DirectoryAndFiles(String directory, Collection<String> filenames) {
+			this(FileSystems.getDefault().getPath(directory), filenames);
 		}
 
 	}
