@@ -4,6 +4,8 @@ import com.frejdh.util.environment.watcher.DirectoryWatcher;
 import com.frejdh.util.environment.watcher.DirectoryWatcherBuilder;
 import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -17,8 +19,9 @@ import java.util.stream.Collectors;
 /**
  * Handles different environment variables set by different frameworks. Currently handles: <br>
  * - Java (environmental variables) <br>
- * - Spring-boot (application[-profile].properties) <br>
+ * - Spring-boot (application[-profile].properties|yml) <br>
  * - Vertx (conf/config.json & conf/config.json5) <br>
+ * - Additionally set configuration files (.properties|yml|json|json5)
  */
 @SuppressWarnings({"SameParameterValue", "unused"})
 public class Config {
@@ -26,7 +29,7 @@ public class Config {
 
 	private static volatile boolean isInitialized = false;
 	private static final java.util.Properties environmentVariables = new java.util.Properties(System.getProperties());
-	private static final Set<String> filesToLoad = new HashSet<>();
+	private static final Set<FileUtils.DirectoryAndFiles> filesToLoad = new HashSet<>();
 	private static volatile boolean isRuntimeEnabled;
 	private static volatile DirectoryWatcher directoryWatcher = null;
 
@@ -45,20 +48,26 @@ public class Config {
 	 * Set the default files to load
 	 */
 	private static void setDefaultFilesToLoad() {
+		List<String> classpathFiles = new ArrayList<>();
+
 		// Spring
+		classpathFiles.add("application.properties");
+		classpathFiles.add("application.yml");
 		String springProfile = System.getProperty("spring.profiles.active", "");
-		filesToLoad.add("application" + (!springProfile.isEmpty() ? "-" + springProfile : "") + ".properties");
+		if (!springProfile.isEmpty()) {
+			classpathFiles.add(String.format("application-%s.properties", springProfile));
+			classpathFiles.add(String.format("application-%s.yml", springProfile));
+		}
+
+		filesToLoad.add(new FileUtils.DirectoryAndFiles("", classpathFiles));
 
 		// Vertx
-		filesToLoad.add("conf/config.json");
-
-		// Vertx, but JSON5 (not an official Vertx file, but I like the additional support of comments)
-		filesToLoad.add("conf/config.json5");
+		filesToLoad.add(new FileUtils.DirectoryAndFiles("conf", new ArrayList<>(Arrays.asList("config.json", "config.json5"))));
 	}
 
 	private static void loadAdditionalConfigFiles() {
-		List<String> additionalFilenames = ConfigParser.stringToList(get("config.sources", "", String.class, false), ",")
-				.stream().filter(str -> str != null && !str.isEmpty()).map(String::trim).collect(Collectors.toList());
+		List<String> additionalFilenames = getAdditionalConfigFilesByEnvName("config.sources");
+		additionalFilenames.addAll(getAdditionalConfigFilesByEnvName("spring.additional-files"));
 
 		Iterator<String> iter = additionalFilenames.iterator();
 		while (iter.hasNext()) {
@@ -72,6 +81,11 @@ public class Config {
 
 		filesToLoad.addAll(additionalFilenames);
 
+	}
+
+	private static List<String> getAdditionalConfigFilesByEnvName(String envName) {
+		return ConfigParser.stringToList(get(envName, "", String.class, false), ",")
+				.stream().filter(str -> str != null && !str.isEmpty()).map(String::trim).collect(Collectors.toList());
 	}
 
 	public static void loadEnvironmentVariables(boolean force) {
