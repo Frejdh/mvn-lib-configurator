@@ -12,7 +12,7 @@
 
     <groupId>com.frejdh.util.enviroment</groupId>
     <artifactId>configurator</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -31,6 +31,12 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.frejdh.util</groupId>
+            <artifactId>file-watcher</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+
         <dependency> <!-- For JSON5 support -->
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -235,6 +241,10 @@
         <repository>
             <id>mvn-lib-common-annotations</id>
             <url>https://raw.github.com/Frejdh/mvn-lib-common-annotations/mvn-repo/</url>
+        </repository>
+        <repository>
+            <id>mvn-lib-file-watcher</id>
+            <url>https://raw.github.com/Frejdh/mvn-lib-file-watcher/mvn-repo/</url>
         </repository>
     </repositories>
 

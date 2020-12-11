@@ -5,49 +5,65 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
-public class JsonParser {
-	private static final boolean JSON_ALLOW_COMMENTS_DEFAULT = false;
-	private static final String ARRAY_SEPARATOR_CHARACTER = "\u0001;\u0001";
+public class JsonParser extends AbstractParser {
+	private static final boolean JSON_ALLOW_COMMENTS_DEFAULT = true;
+	private static AbstractParser singletonInstance;
+
+	protected JsonParser() { }
+
+	public static AbstractParser getSingletonInstance() {
+		if (singletonInstance == null) {
+			synchronized (JsonParser.class) { // Only lock if new instance
+				if (singletonInstance == null) { // To avoid race condition
+					singletonInstance = new JsonParser();
+				}
+			}
+		}
+
+		return singletonInstance;
+	}
 
 	/**
 	 * Remaps nested objects for easier access. E.g. the field 'service': {'port': XXXX} will be accessible with 'service.port'
 	 * @param jsonString JSON object to parse
 	 * @param allowComments If the JSON file has comments, please set this to true.
 	 */
-	public static Map<String, String> jsonToMap(String jsonString, boolean allowComments) throws IOException {
-		JsonReader jsonReader = new JsonReader(new StringReader(allowComments ? JsonParser.removeJsonComments(jsonString) : jsonString));
+	public Map<String, String> toMap(String jsonString, boolean allowComments) throws IOException {
+		JsonReader jsonReader = new JsonReader(new StringReader(allowComments ? removeJsonComments(jsonString) : jsonString));
 		jsonReader.setLenient(true); // Allow trailing commas, etc
 
-		return jsonToMap(new com.google.gson.JsonParser().parse(jsonReader).getAsJsonObject());
+		return toMap(new com.google.gson.JsonParser().parse(jsonReader).getAsJsonObject());
 	}
 
 	/**
-	 * Same as ${@link #jsonToMap(String, boolean)} with allowComments = ${@value JSON_ALLOW_COMMENTS_DEFAULT}
+	 * Same as ${@link #toMap(String, boolean)} with allowComments = ${@value JSON_ALLOW_COMMENTS_DEFAULT}
 	 * @param jsonString JSON object to parse
 	 */
-	public static Map<String, String> jsonToMap(String jsonString) throws IOException {
-		return jsonToMap(jsonString, JSON_ALLOW_COMMENTS_DEFAULT);
+	@Override
+	public Map<String, String> toMap(String jsonString) throws IOException {
+		return toMap(jsonString, JSON_ALLOW_COMMENTS_DEFAULT);
 	}
 
 	/**
 	 * Remaps nested objects for easier access. E.g. the field 'service': {'port': XXXX} will be accessible with 'service.port'
 	 * @param jsonObject JSON object to parse
 	 */
-	public static Map<String, String> jsonToMap(JsonObject jsonObject)  {
+	public Map<String, String> toMap(JsonObject jsonObject)  {
 		return jsonToMapHelper(jsonObject, "", new HashMap<>());
 	}
 
-	private static Map<String, String> jsonToMapHelper(JsonElement jsonElement, String propertyPath, Map<String, String> mapToReturn) {
+	private Map<String, String> jsonToMapHelper(JsonElement jsonElement, String propertyPath, Map<String, String> mapToReturn) {
 		if (jsonElement.isJsonObject()) {
 			JsonObject jsonObject = jsonElement.getAsJsonObject();
 
+
 			for (String field : jsonObject.keySet()) {
+
 				String appendedProperty = propertyPath + (propertyPath.isEmpty() ? "" : ".") + field;
 
 				if (jsonObject.get(field).isJsonObject()) {
@@ -57,7 +73,7 @@ public class JsonParser {
 					jsonToMapHelper(jsonObject.getAsJsonArray(field), appendedProperty, mapToReturn);
 				}
 				else {
-					mapToReturn.put(appendedProperty, jsonObject.get(field).toString());
+					mapToReturn.put(appendedProperty.replace("_", "."), jsonObject.get(field).toString());
 				}
 			}
 		}
@@ -78,7 +94,7 @@ public class JsonParser {
 			}
 
 			if (arrayValues.length() != 0) {
-				mapToReturn.put(propertyPath, arrayValues.toString());
+				mapToReturn.put(propertyPath.replace("_", "."), arrayValues.toString());
 			}
 		}
 		return mapToReturn;
@@ -91,7 +107,7 @@ public class JsonParser {
 	 * @return A new JSON string that is stripped of comments
 	 * @throws IOException If the JSON couldn't be parsed
 	 */
-	public static String removeJsonComments(String jsonString) throws IOException {
+	public String removeJsonComments(String jsonString) throws IOException {
 		JsonMapper mapper = JsonMapper.builder()
 				.enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
 				.enable(JsonReadFeature.ALLOW_TRAILING_COMMA)

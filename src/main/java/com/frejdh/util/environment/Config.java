@@ -1,17 +1,22 @@
 package com.frejdh.util.environment;
 
-import com.frejdh.util.environment.watcher.DirectoryWatcher;
-import com.frejdh.util.environment.watcher.DirectoryWatcherBuilder;
+import com.frejdh.util.environment.storage.PropertiesWrapper;
+import com.frejdh.util.watcher.StorageWatcher;
+import com.frejdh.util.watcher.StorageWatcherBuilder;
 import org.jetbrains.annotations.NotNull;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.StandardWatchEventKinds;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -28,19 +33,34 @@ public class Config {
 	private static final Logger LOGGER = Logger.getLogger(Config.class.getName());
 
 	private static volatile boolean isInitialized = false;
-	private static final java.util.Properties environmentVariables = new java.util.Properties(System.getProperties());
-	private static final Set<FileUtils.DirectoryAndFiles> filesToLoad = new HashSet<>();
+	private static final PropertiesWrapper environmentVariables = new PropertiesWrapper(System.getProperties());;
+	private static final Set<String> filesToLoad = new LinkedHashSet<>();
 	private static volatile boolean isRuntimeEnabled;
-	private static volatile DirectoryWatcher directoryWatcher = null;
+	private static volatile StorageWatcher storageWatcher = null;
 
 	static {
+		LOGGER.setLevel(Level.ALL);
 		setDefaultFilesToLoad();
 		loadEnvironmentVariables(false);
 		loadAdditionalConfigFiles();
+		initRuntimeWatcher();
+	}
 
-		if (get("property.runtime.enabled", false, Boolean.class, false)) {
-			Config.directoryWatcher = new DirectoryWatcherBuilder()
+	private static void initRuntimeWatcher() {
+		if (get("config.runtime.enabled", false, Boolean.class, false)) {
+			long interval = get("config.runtime.interval.value", 10L, Long.class, false);
+			String unit = get("config.runtime.interval.unit", TimeUnit.SECONDS.name(), String.class, false);
+
+			Config.storageWatcher = StorageWatcherBuilder.getBuilder()
+					.interval(interval, TimeUnit.valueOf(unit.toUpperCase()))
+					.watchFiles(filesToLoad)
+					.specifyEvents(StandardWatchEventKinds.ENTRY_MODIFY)
+					.onChanged((directory, filename) -> {
+						LOGGER.info("Detected change in '" + filename + "'. Refreshing...");
+						loadVariablesFromFile(directory + File.separator + filename);
+					})
 					.build();
+			Config.storageWatcher.start();
 		}
 	}
 
@@ -59,10 +79,11 @@ public class Config {
 			classpathFiles.add(String.format("application-%s.yml", springProfile));
 		}
 
-		filesToLoad.add(new FileUtils.DirectoryAndFiles("", classpathFiles));
+		filesToLoad.addAll(classpathFiles);
 
 		// Vertx
-		filesToLoad.add(new FileUtils.DirectoryAndFiles("conf", new ArrayList<>(Arrays.asList("config.json", "config.json5"))));
+		filesToLoad.add("conf/config.json");
+		filesToLoad.add("conf/config.json5");
 	}
 
 	private static void loadAdditionalConfigFiles() {
@@ -78,13 +99,12 @@ public class Config {
 				iter.remove();
 			}
 		}
-
 		filesToLoad.addAll(additionalFilenames);
 
 	}
 
 	private static List<String> getAdditionalConfigFilesByEnvName(String envName) {
-		return ConfigParser.stringToList(get(envName, "", String.class, false), ",")
+		return ConversionUtils.stringToList(get(envName, "", String.class, false), ",")
 				.stream().filter(str -> str != null && !str.isEmpty()).map(String::trim).collect(Collectors.toList());
 	}
 
@@ -131,24 +151,23 @@ public class Config {
 				return false;
 			}
 
-			if (filename.matches("(?i).*[.]json[5]*$")) { // Ends with .json or .json5 (case-insensitive)
-				properties.putAll(ConfigParser.jsonToMap(fileContent, true));
-			}
-			else { // Not json, read values by the format 'variable=true' format, line per line
-				properties.putAll(ConfigParser.textToMap(fileContent));
-			}
+			Map<String, String> newProperties = ParserSelector.getParser(filename).toMap(fileContent);
+			environmentVariables.putAll(newProperties);
+			LOGGER.log(Level.FINE, "New properties added from file '" + filename + "'. List of added keys: " + newProperties.keySet());
+			return true;
 		} catch (IOException e) {
 			LOGGER.log(Level.WARNING, "Couldn't load the file '" + filename + "'. Reason: " + e.getMessage());
 		}
-		properties.keySet().forEach(key -> environmentVariables.setProperty(key, properties.get(key)));
 
-		return true;
+		return false;
 	}
 
 	private static void loadVariablesFromProgram() {
-		for (String propertyName : System.getProperties().stringPropertyNames()) {
-			environmentVariables.setProperty(propertyName, System.getProperty(propertyName));
+		Set<String> programProperties = System.getProperties().stringPropertyNames();
+		for (String propertyName : programProperties) {
+			environmentVariables.put(propertyName, System.getProperty(propertyName));
 		}
+		LOGGER.fine("New properties added from program. List of added keys: " + programProperties);
 	}
 
 	private static void waitForInitialization() {
@@ -164,18 +183,19 @@ public class Config {
 	}
 
 	// Internal. Set if the property should be fetched runtime or not.
-	private static <T> T get(String name, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
+	private static <T> T get(String key, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
 		waitForInitialization();
 
 		// Check if runtime configuration is enabled, refresh!
-		if (isRuntimeEnabled) {
-			loadEnvironmentVariables(true);
-		}
+		//if (isRuntimeEnabled) {
+		//	loadEnvironmentVariables(true);
+		//}
 
-		String stringValue = environmentVariables.getProperty(name);
+		String stringValue = environmentVariables.getProperty(key);
 		if (stringValue != null) {
 			stringValue = stringValue.replaceAll("(^\")|(\"$)", "");
-			return ConfigParser.convertToType(stringValue, returnType);
+			LOGGER.fine("Getting configuration '" + key + "'. Got: '" + stringValue + "'");
+			return ConversionUtils.convertToType(stringValue, returnType);
 		}
 
 		return null;
@@ -196,7 +216,7 @@ public class Config {
 	// Internal. Set if the property should be fetched runtime or not.
 	private static <T> T get(String name, T defaultValue, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
 		T result = get(name, returnType, isRuntimeEnabled);
-		return result != null ? result : ConfigParser.convertToType(defaultValue.toString(), returnType);
+		return result != null ? result : ConversionUtils.convertToType(defaultValue.toString(), returnType);
 	}
 
 	/**
@@ -212,10 +232,50 @@ public class Config {
 		return get(name, defaultValue, returnType, Config.isRuntimeEnabled);
 	}
 
+	/**
+	 * Get all of the properties as a string
+	 * @return A string
+	 */
 	public static String getPropertiesAsString() {
 		return environmentVariables.entrySet().toString();
 	}
 
+	/**
+	 * Get all of the properties as a map.
+	 * @return A map
+	 */
+	public static Map<String, String> getPropertiesAsMap() {
+		return getPropertiesAsMap(environmentVariables.entrySet());
+	}
+
+	/**
+	 * Get all of the properties as a map.
+	 * @return A map
+	 */
+	private static Map<String, String> getPropertiesAsMap(Collection<Map.Entry<Object, Object>> entrySet) {
+		return new HashMap<>(entrySet.stream().collect(Collectors.toMap(
+				entry -> Optional.ofNullable(entry.getKey()).orElse("").toString(),
+				entry -> Optional.ofNullable(entry.getValue()).orElse("").toString())
+		));
+	}
+
+	/**
+	 * Get all of the properties as a map.
+	 * @return A map
+	 */
+	private static Map<String, String> getPropertiesAsMap(Map<Object, Object> genericMap) {
+		return getPropertiesAsMap(genericMap.entrySet());
+	}
+
+
+	/**
+	 * The loaded files by this configurator. Left is loaded first, and the right side is loaded last.
+	 * Properties that are loaded by later by a file will have overriden any previously set properties.
+	 * @return A list of files. Newer files are last in the list.
+	 */
+	public static List<String> getLoadedFiles() {
+		return new ArrayList<>(filesToLoad);
+	}
 
 	//
 	// Property getters
@@ -240,11 +300,11 @@ public class Config {
 	}
 
 	public static List<String> getStringList(String name) {
-		return ConfigParser.stringToList(getString(name));
+		return ConversionUtils.stringToList(getString(name));
 	}
 
 	public static List<String> getStringList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator);
+		return ConversionUtils.stringToList(getString(name), separator);
 	}
 
 	/**
@@ -268,11 +328,11 @@ public class Config {
 
 
 	public static List<Boolean> getBooleanList(String name) {
-		return ConfigParser.stringToList(getString(name), Boolean.class);
+		return ConversionUtils.stringToList(getString(name), Boolean.class);
 	}
 
 	public static List<Boolean> getBooleanList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Boolean.class);
+		return ConversionUtils.stringToList(getString(name), separator, Boolean.class);
 	}
 
 	/**
@@ -295,11 +355,11 @@ public class Config {
 	}
 
 	public static List<Integer> getIntegerList(String name) {
-		return ConfigParser.stringToList(getString(name), Integer.class);
+		return ConversionUtils.stringToList(getString(name), Integer.class);
 	}
 
 	public static List<Integer> getIntegerList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Integer.class);
+		return ConversionUtils.stringToList(getString(name), separator, Integer.class);
 	}
 
 	/**
@@ -322,11 +382,11 @@ public class Config {
 	}
 
 	public static List<Long> getLongList(String name) {
-		return ConfigParser.stringToList(getString(name), Long.class);
+		return ConversionUtils.stringToList(getString(name), Long.class);
 	}
 
 	public static List<Long> getLongList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Long.class);
+		return ConversionUtils.stringToList(getString(name), separator, Long.class);
 	}
 
 	/**
@@ -349,11 +409,11 @@ public class Config {
 	}
 
 	public static List<Double> getDoubleList(String name) {
-		return ConfigParser.stringToList(getString(name), Double.class);
+		return ConversionUtils.stringToList(getString(name), Double.class);
 	}
 
 	public static List<Double> getDoubleList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Double.class);
+		return ConversionUtils.stringToList(getString(name), separator, Double.class);
 	}
 
 	/**
@@ -376,11 +436,11 @@ public class Config {
 	}
 
 	public static List<Float> getFloatList(String name) {
-		return ConfigParser.stringToList(getString(name), Float.class);
+		return ConversionUtils.stringToList(getString(name), Float.class);
 	}
 
 	public static List<Float> getFloatList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Float.class);
+		return ConversionUtils.stringToList(getString(name), separator, Float.class);
 	}
 
 	/**
@@ -403,11 +463,11 @@ public class Config {
 	}
 
 	public static List<Character> getCharacterList(String name) {
-		return ConfigParser.stringToList(getString(name), Character.class);
+		return ConversionUtils.stringToList(getString(name), Character.class);
 	}
 
 	public static List<Character> getCharacterList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Character.class);
+		return ConversionUtils.stringToList(getString(name), separator, Character.class);
 	}
 
 	/**
@@ -430,11 +490,11 @@ public class Config {
 	}
 
 	public static List<Short> getShortList(String name) {
-		return ConfigParser.stringToList(getString(name), Short.class);
+		return ConversionUtils.stringToList(getString(name), Short.class);
 	}
 
 	public static List<Short> getShortList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Short.class);
+		return ConversionUtils.stringToList(getString(name), separator, Short.class);
 	}
 
 	/**
@@ -457,10 +517,10 @@ public class Config {
 	}
 
 	public static List<Byte> getByteList(String name) {
-		return ConfigParser.stringToList(getString(name), Byte.class);
+		return ConversionUtils.stringToList(getString(name), Byte.class);
 	}
 
 	public static List<Byte> getByteList(String name, String separator) {
-		return ConfigParser.stringToList(getString(name), separator, Byte.class);
+		return ConversionUtils.stringToList(getString(name), separator, Byte.class);
 	}
 }

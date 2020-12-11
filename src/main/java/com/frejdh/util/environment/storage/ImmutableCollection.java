@@ -1,4 +1,4 @@
-package com.frejdh.util.environment;
+package com.frejdh.util.environment.storage;
 
 import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.InvocationTargetException;

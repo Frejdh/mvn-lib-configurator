@@ -7,7 +7,7 @@ or `conf/config.json` files that may exist for Vertx. Also added support for `.j
 By default, there will be an attempt to load the files that are commonly used by Spring-boot and Vertx. 
 Environment variables set during the execution will also be loaded and will override the given properties in the files.
 Additional property files can be added either inside one of the default property files or as an environment variable with the key `config.sources` (string).
-Runtime configuration can be enabled with the variable `property.runtime.enabled` (boolean).
+Runtime configuration can be enabled with the variable `config.runtime.enabled` (boolean).
 <br>
 Example for adding more property source files: `config.sources=myOtherFile.properties, test.json, testWithCommentSupport.json5`
 
