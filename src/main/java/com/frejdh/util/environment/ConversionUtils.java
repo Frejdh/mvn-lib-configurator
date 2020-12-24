@@ -68,13 +68,28 @@ public class ConversionUtils {
 	 * Convert a string to list. Not recommended to use for properties set in JSON files.
 	 * @param text Text to convert
 	 * @param separatorCharacters Characters to split with. Example string: ",.;|"
+	 * @param trim If the text should be trimmed or not
+	 * @return A mutable list
+	 */
+	public static List<String> stringToList(String text, String separatorCharacters, boolean trim) {
+		return text != null ? new ArrayList<>(Arrays.asList(text.split("[" + separatorCharacters + "]"))).stream()
+				.filter(element -> element != null && !element.isEmpty())
+				.map(str -> {
+					if (trim)
+						str = str.trim();
+					return str.replace(ARRAY_SEPARATOR_CHARACTER, "");
+				})
+				.collect(Collectors.toList()) : new ArrayList<>(); // Mutable
+	}
+
+	/**
+	 * Convert a string to list. Not recommended to use for properties set in JSON files.
+	 * @param text Text to convert
+	 * @param separatorCharacters Characters to split with. Example string: ",.;|"
 	 * @return A mutable list
 	 */
 	public static List<String> stringToList(String text, String separatorCharacters) {
-		return text != null ? new ArrayList<>(Arrays.asList(text.split("\\s*[" + separatorCharacters + "]\\s*"))).stream()
-				.filter(element -> element != null && !element.isEmpty())
-				.map(str -> str.trim().replace(ARRAY_SEPARATOR_CHARACTER, ""))
-				.collect(Collectors.toList()) : new ArrayList<>(); // Mutable
+		return stringToList(text, separatorCharacters, true);
 	}
 
 	/**

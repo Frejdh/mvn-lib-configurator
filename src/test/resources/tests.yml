@@ -1,0 +1,22 @@
+# Array variant 1
+simple.array-test.yml.variant1[0]: Hello 0
+simple.array-test.yml.variant1[1]: Hello 1
+simple:
+  array-test:
+    yml:
+      variant1[2]: Hello 2
+      variant1[3]: Hello 3
+
+# Array variant 2
+      variant2:
+        - Hello 0
+        - Hello 1
+        - Hello 2
+        - Hello 3
+
+# Array variant 3 (with mixed quotations)
+      variant3: ['Hello 0', 'Hello 1', "Hello 2", "Hello 3"]
+
+comment.test.keep1: '# Keep this'
+comment.test.keep2: "# Keep this"
+comment.test.discard: Keep this \# # but not this!

@@ -3,7 +3,7 @@ package com.frejdh.util.environment;
 import org.junit.BeforeClass;
 
 
-public abstract class AbstractTests {
+public abstract class AbstractParserTests {
 
 	@BeforeClass
 	public static void setLogger() {
@@ -13,6 +13,8 @@ public abstract class AbstractTests {
 		System.setProperty("java.util.logging.ConsoleHandler.formatter", "java.util.logging.SimpleFormatter");
 		System.setProperty("com.frejdh.util.environment.Config.level", "ALL");
 		System.setProperty("com.frejdh.util.environment.Config.handler", "java.util.logging.ConsoleHandler");
+
+		System.out.println("Loaded files: " + Config.getLoadedFiles());
 	}
 
 }

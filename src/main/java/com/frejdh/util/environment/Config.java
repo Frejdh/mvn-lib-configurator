@@ -152,7 +152,7 @@ public class Config {
 			}
 
 			Map<String, String> newProperties = ParserSelector.getParser(filename).toMap(fileContent);
-			environmentVariables.putAll(newProperties);
+			environmentVariables.setProperties(newProperties);
 			LOGGER.log(Level.FINE, "New properties added from file '" + filename + "'. List of added keys: " + newProperties.keySet());
 			return true;
 		} catch (IOException e) {
@@ -165,7 +165,7 @@ public class Config {
 	private static void loadVariablesFromProgram() {
 		Set<String> programProperties = System.getProperties().stringPropertyNames();
 		for (String propertyName : programProperties) {
-			environmentVariables.put(propertyName, System.getProperty(propertyName));
+			environmentVariables.setProperty(propertyName, System.getProperty(propertyName));
 		}
 		LOGGER.fine("New properties added from program. List of added keys: " + programProperties);
 	}
@@ -185,11 +185,6 @@ public class Config {
 	// Internal. Set if the property should be fetched runtime or not.
 	private static <T> T get(String key, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
 		waitForInitialization();
-
-		// Check if runtime configuration is enabled, refresh!
-		//if (isRuntimeEnabled) {
-		//	loadEnvironmentVariables(true);
-		//}
 
 		String stringValue = environmentVariables.getProperty(key);
 		if (stringValue != null) {

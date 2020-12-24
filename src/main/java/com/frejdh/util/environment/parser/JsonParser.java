@@ -12,11 +12,11 @@ import java.util.Map;
 
 public class JsonParser extends AbstractParser {
 	private static final boolean JSON_ALLOW_COMMENTS_DEFAULT = true;
-	private static AbstractParser singletonInstance;
+	private static JsonParser singletonInstance;
 
 	protected JsonParser() { }
 
-	public static AbstractParser getSingletonInstance() {
+	public static JsonParser getSingletonInstance() {
 		if (singletonInstance == null) {
 			synchronized (JsonParser.class) { // Only lock if new instance
 				if (singletonInstance == null) { // To avoid race condition
@@ -61,9 +61,7 @@ public class JsonParser extends AbstractParser {
 		if (jsonElement.isJsonObject()) {
 			JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-
 			for (String field : jsonObject.keySet()) {
-
 				String appendedProperty = propertyPath + (propertyPath.isEmpty() ? "" : ".") + field;
 
 				if (jsonObject.get(field).isJsonObject()) {
@@ -73,7 +71,7 @@ public class JsonParser extends AbstractParser {
 					jsonToMapHelper(jsonObject.getAsJsonArray(field), appendedProperty, mapToReturn);
 				}
 				else {
-					mapToReturn.put(appendedProperty.replace("_", "."), jsonObject.get(field).toString());
+					mapToReturn.put(appendedProperty, jsonObject.get(field).toString());
 				}
 			}
 		}
@@ -84,6 +82,7 @@ public class JsonParser extends AbstractParser {
 			StringBuilder arrayValues = new StringBuilder();
 			for (JsonElement element : jsonArray) {
 				if (element.isJsonPrimitive()) {
+					mapToReturn.put(propertyPath + "[" + i + "]", element.toString());
 					arrayValues.append(element).append(ARRAY_SEPARATOR_CHARACTER);
 				}
 				else {
@@ -94,7 +93,7 @@ public class JsonParser extends AbstractParser {
 			}
 
 			if (arrayValues.length() != 0) {
-				mapToReturn.put(propertyPath.replace("_", "."), arrayValues.toString());
+				mapToReturn.put(propertyPath, arrayValues.toString());
 			}
 		}
 		return mapToReturn;

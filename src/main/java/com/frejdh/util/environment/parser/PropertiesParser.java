@@ -1,9 +1,16 @@
 package com.frejdh.util.environment.parser;
 
 import com.frejdh.util.environment.ConversionUtils;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -11,11 +18,15 @@ import java.util.stream.Collectors;
  */
 public class PropertiesParser extends AbstractParser {
 
-	private static AbstractParser singletonInstance;
+	// Found array entries are saved as capture groups.
+	// For example: asd[0].otherArray[0]="blabla" has the capture groups 'asd[0]' and 'otherArray[0]'.
+	private static final Pattern ARRAY_PATTERN = Pattern.compile("^(.+?\\[\\d+])(?:\\.(.+?\\[\\d+]))*\\s*=");
+
+	private static PropertiesParser singletonInstance;
 
 	protected PropertiesParser() { }
 
-	public static AbstractParser getSingletonInstance() {
+	public static PropertiesParser getSingletonInstance() {
 		if (singletonInstance == null) {
 			synchronized (PropertiesParser.class) { // Only lock if new instance
 				if (singletonInstance == null) { // To avoid race condition
@@ -43,19 +54,28 @@ public class PropertiesParser extends AbstractParser {
 	 * @return A Map
 	 */
 	public Map<String, String> toMap(String textContent) throws IOException {
-		List<String> lines = ConversionUtils.stringToList(textContent, "\n");
+		List<String> lines = ConversionUtils.stringToList(textContent, "\n")
+				.stream()
+				.filter(line -> !line.isEmpty() && !line.matches("\\s*#.*") && line.contains("=")) // Not empty, not comment and has variable assignment
+				.collect(Collectors.toList());
 
-		return lines.stream()
-				.filter(line -> !line.isEmpty() && !line.matches("\\s*#.*") && line.contains("=")) // Not empty, not comment & has variable assignment
-				.collect(Collectors.toMap(
-						line -> line.split("=")[0].trim().replace("_", "."),
-						line -> {
-							line = line.split("=").length > 1 ? line.split("=")[1].trim() : "";
-							if (line.matches("^\".*\"$")) { // If wrapped by quotes, remove them from the string
-								line = line.replaceAll("(^\")|(\"$)", "");
-							}
-							return line;
-						}
-				));
+		Map<String, String> mapToReturn = new HashMap<>();
+		for (String line : lines) {
+			String fullPath = line.split("\\s*=")[0];
+			String value = line.substring(line.lastIndexOf('=') + 1);
+
+			final Matcher arrayMatcher = ARRAY_PATTERN.matcher(line);
+			if (arrayMatcher.find()) { // If array
+				mapToReturn.put(fullPath, value);
+				String arrayFieldWithoutIndex = fullPath.replaceAll("\\[\\d+].*?\\s*$", "");
+				String existingArrayString =  mapToReturn.getOrDefault(arrayFieldWithoutIndex, "");
+				mapToReturn.put(arrayFieldWithoutIndex, (!existingArrayString.isEmpty() ? existingArrayString + ARRAY_SEPARATOR_CHARACTER : "") + value);
+			}
+			else {
+				mapToReturn.put(fullPath, value);
+			}
+		}
+
+		return mapToReturn;
 	}
 }

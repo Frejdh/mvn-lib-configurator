@@ -1,6 +1,5 @@
 package com.frejdh.util.environment.storage;
 
-import com.frejdh.util.environment.ConversionUtils;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,13 +33,13 @@ public class PropertiesWrapper extends Properties {
 		Set<Map.Entry<Object, Object>> tmpEntries = new HashSet<>(entries);
 		tmpEntries.forEach(entry -> setProperty(
 				cleanupPropertyKey(entry.getKey()),
-				entry.getValue() != null ? entry.getValue().toString() : null
+				cleanupPropertyValue(entry.getValue())
 		));
 	}
 
 	public synchronized void setProperties(Map<String, String> entries) {
 		Map<String, String> tmpEntries = new HashMap<>(entries);
-		cleanupPropertyKeys(tmpEntries);
+		cleanupPropertyKeysAndValues(tmpEntries);
 		tmpEntries.forEach(this::setProperty);
 	}
 
@@ -60,18 +59,35 @@ public class PropertiesWrapper extends Properties {
 	}
 
 	private String cleanupPropertyKey(String key) {
-		return key.replace("_", ".");
+		return key.trim().replace("_", ".");
 	}
 
-	private void cleanupPropertyKeys(Map<String, String> newProperties) {
+	private String cleanupPropertyValue(Object value) {
+		return cleanupPropertyValue(value != null ? value.toString() : null);
+	}
+
+	private String cleanupPropertyValue(String value) {
+		if (value == null) {
+			return "";
+		}
+
+		// If wrapped by quotes, remove them from the string
+		return value.trim().replaceAll("(^\")|(\"$)", "").replaceAll("(^')|('$)", "");
+	}
+
+	private void cleanupPropertyKeysAndValues(Map<String, String> newProperties) {
 		Set<Map.Entry<String, String>> set = new HashSet<>(newProperties.entrySet());
 
 		for (Map.Entry<String, String> entry : set) {
 			String oldKey = entry.getKey();
 			String newKey = cleanupPropertyKey(oldKey);
+
 			if (!oldKey.equals(newKey)) {
-				newProperties.put(newKey, Optional.ofNullable(entry.getValue()).orElse(""));
+				newProperties.put(newKey, cleanupPropertyValue(entry.getValue()));
 				newProperties.remove(oldKey);
+			}
+			else {
+				newProperties.put(oldKey, cleanupPropertyValue(entry.getValue()));
 			}
 		}
 	}
