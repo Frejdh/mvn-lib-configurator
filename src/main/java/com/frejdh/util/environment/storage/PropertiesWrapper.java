@@ -59,7 +59,9 @@ public class PropertiesWrapper extends Properties {
 	}
 
 	private String cleanupPropertyKey(String key) {
-		return key.trim().replace("_", ".");
+		return key.trim()
+				.replace("_", ".")
+				.replaceAll("([a-z])([A-Z])", "$1-$2").toLowerCase();
 	}
 
 	private String cleanupPropertyValue(Object value) {

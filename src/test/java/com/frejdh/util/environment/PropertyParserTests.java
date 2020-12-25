@@ -97,4 +97,14 @@ public class PropertyParserTests extends AbstractParserTests {
 			}
 		}
 	}
+
+	@Test
+	public void canHandleUppercaseLettersAndDashes() {
+		List<String> propertyKeys = Arrays.asList("formatting.test.uppercase-usage-works", "formatting.test.uppercaseUsageWorks");
+		String expectedValue = "It works!";
+
+		for (String propertyKey : propertyKeys) {
+			assertEquals(expectedValue, Config.getString(propertyKey)); // Should be found
+		}
+	}
 }
