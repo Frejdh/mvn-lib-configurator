@@ -30,7 +30,7 @@ Other than the loaded environmental variables, the following files are always at
 <repositories> <!-- Required in order to resolve this package -->
     <repository>
         <id>mvn-lib-configurator</id>
-        <url>https://raw.github.com/Frejdh/mvn-lib-configurator/mvn-repo/</url>
+        <url>https://raw.github.com/Frejdh/mvn-lib-configurator/releases/</url>
     </repository>
 </repositories>
 ```
