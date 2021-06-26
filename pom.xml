@@ -10,9 +10,9 @@
         <version>1.0.0</version>
     </parent>
 
-    <groupId>com.frejdh.util.enviroment</groupId>
+    <groupId>com.frejdh.util.environment</groupId>
     <artifactId>configurator</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -232,11 +232,11 @@
     <repositories>
         <repository>
             <id>library-master-pom</id>
-            <url>https://raw.github.com/Frejdh/mvn-lib-master/mvn-repo/</url>
+            <url>https://raw.github.com/Frejdh/mvn-lib-master/releases/</url>
         </repository>
         <repository>
             <id>mvn-lib-common-toolbox</id>
-            <url>https://raw.github.com/Frejdh/mvn-lib-common-toolbox/mvn-repo/</url>
+            <url>https://raw.github.com/Frejdh/mvn-lib-common-toolbox/releases/</url>
         </repository>
         <repository>
             <id>mvn-lib-common-annotations</id>
