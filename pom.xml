@@ -10,7 +10,7 @@
         <version>1.0.0</version>
     </parent>
 
-    <groupId>com.frejdh.util.environment</groupId>
+    <groupId>com.frejdh.util.enviroment</groupId>
     <artifactId>configurator</artifactId>
     <version>1.1.0</version>
     <packaging>jar</packaging>
