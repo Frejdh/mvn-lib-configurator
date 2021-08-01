@@ -23,7 +23,7 @@ Other than the loaded environmental variables, the following files are always at
     <dependency>
         <groupId>com.frejdh.util.environment</groupId>
         <artifactId>configurator</artifactId>
-        <version>1.1.0</version>
+        <version>2.0.0</version>
     </dependency>
 </dependencies>
 
@@ -33,6 +33,47 @@ Other than the loaded environmental variables, the following files are always at
         <url>https://raw.github.com/Frejdh/mvn-lib-configurator/releases/</url>
     </repository>
 </repositories>
+```
+
+## Usage
+Use the class `Config`. For instance:
+```java
+// ... other imports
+import com.frejdh.util.environment.Config;
+
+public class Sample {
+    private String myString = Config.getString("my-property.string");
+    private List<Integer> myInt = Config.getIntegerList("my-property.list-of-integers");
+}
+```
+
+## Test-helper classes
+This dependency also includes some helpful classes for writing tests.
+
+### Property annotation
+`@TestProperty`
+
+Usage example:
+```java
+import com.frejdh.util.environment.Config;
+import com.frejdh.util.environment.test.TestProperty;
+import com.frejdh.util.environment.test.TestPropertyRule;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+
+public class SampleTest {
+
+    @Rule
+    public final TestPropertyRule configRule = new TestPropertyRule();
+
+    @Test
+    @TestProperty(key = "my-property.example", value = "some value")
+    public void annotationWorks() {
+        Assert.assertEquals("some value", Config.getString("my-property.example"));
+    }
+
+}
 ```
 
 ## Other libraries
