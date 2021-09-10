@@ -1,4 +1,4 @@
-package com.frejdh.util.environment.test;
+package com.frejdh.util.environment.test.helper;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,12 +38,26 @@ public class TestFileHelper {
 	private static final AtomicInteger FILENAME_COUNTER = new AtomicInteger();
 	private static final String CLASSPATH = TestFileHelper.class.getClassLoader().getResource("").getPath();
 	private static final Map<String, String> ORIGINAL_FILE_CONTENTS = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+	private static boolean IS_CREATING_BACKUP_FILES = true;
+
+	public static void enableCreationOfBackupFiles(boolean createBackupFiles) {
+		IS_CREATING_BACKUP_FILES = createBackupFiles;
+	}
+
+	public static boolean isCreatingBackupFiles() {
+		return IS_CREATING_BACKUP_FILES;
+	}
 
 	public static String nextFilename() {
 		return String.format(FILENAME_BASE, FILENAME_COUNTER.getAndIncrement());
 	}
 
-	public static void cleanup() throws Exception {
+	/**
+	 * Run the cleanup method for the test files. Removes/restores/empties the relevant files.
+	 * Suggestively should be called in either "@After" or "@AfterEach" when using Junit.
+	 * @throws IOException When a file could not be restored properly.
+	 */
+	public static void cleanup() throws IOException {
 		for (FileToCleanup file : new ArrayList<>(FILES_TO_CLEANUP)) {
 			String fullpath = CLASSPATH + file.filename;
 			switch (file.cleanupAction) {
@@ -66,7 +80,7 @@ public class TestFileHelper {
 		FILES_TO_CLEANUP.clear();
 	}
 
-	public static void createFile(String filename, CleanupAction cleanupAction) throws Exception {
+	public static void createFile(String filename, CleanupAction cleanupAction, String content) throws IOException {
 		String fullpath = CLASSPATH + filename;
 		Logger.getGlobal().info("Creating file: " + fullpath);
 		File file = new File(fullpath);
@@ -74,15 +88,26 @@ public class TestFileHelper {
 			throw new IOException("File already exists");
 		}
 		else {
+			if (content != null) {
+				writeToExistingFile(fullpath, content, CleanupAction.NONE);
+			}
 			FILES_TO_CLEANUP.add(new FileToCleanup(filename, cleanupAction));
 		}
 	}
 
-	public static void createFile(String filename) throws Exception {
-		createFile(filename, CleanupAction.REMOVE);
+	public static void createFile(String filename, String content) throws IOException {
+		createFile(filename, CleanupAction.REMOVE, content);
 	}
 
-	public static String readFile(String filename) throws Exception {
+	public static void createFile(String filename) throws IOException {
+		createFile(filename, (String) null);
+	}
+
+	public static void createFile(String filename, CleanupAction cleanupAction) throws IOException {
+		createFile(filename, cleanupAction, null);
+	}
+
+	public static String readFile(String filename) throws IOException {
 		String fullpath = CLASSPATH + filename;
 		File file = new File(fullpath);
 		if (file.exists()) {
@@ -102,12 +127,17 @@ public class TestFileHelper {
 		return null;
 	}
 
-	private static void writeToExistingFile(String filename, String content, CleanupAction cleanupAction, boolean isLogging) throws Exception {
+	private static void writeToExistingFile(String filename, String content, CleanupAction cleanupAction, boolean isLogging) throws IOException {
 		String fullpath = CLASSPATH + filename;
 		if (isLogging)
 			Logger.getGlobal().info("Overwriting existing file: " + fullpath);
-		if (CleanupAction.RESTORE.equals(cleanupAction))
+		if (CleanupAction.RESTORE.equals(cleanupAction)) {
 			ORIGINAL_FILE_CONTENTS.putIfAbsent(filename, readFile(filename));
+		}
+
+		if (IS_CREATING_BACKUP_FILES && new File(fullpath).exists()) {
+			createFile(fullpath + ".bak", CleanupAction.REMOVE, ORIGINAL_FILE_CONTENTS.get(filename)); // Create backup first
+		}
 
 		FileWriter myWriter = new FileWriter(fullpath);
 		myWriter.write(content);
@@ -116,18 +146,32 @@ public class TestFileHelper {
 		FILES_TO_CLEANUP.add(new FileToCleanup(filename, cleanupAction));
 	}
 
-	public static void writeToExistingFile(String filename, String content, CleanupAction cleanupAction) throws Exception {
+	public static void writeToExistingFile(String filename, String content, CleanupAction cleanupAction) throws IOException {
 		writeToExistingFile(filename, content, cleanupAction, true);
 	}
 
-	public static void writeToExistingFile(String filename, String content) throws Exception {
-		writeToExistingFile(filename, content, CleanupAction.EMPTY);
+	public static void writeToExistingFile(String filename, String content) throws IOException {
+		writeToExistingFile(filename, content, CleanupAction.RESTORE);
+	}
+
+	public static void deleteFile(String filename, CleanupAction cleanupAction) throws IOException {
+		String fullpath = CLASSPATH + filename;
+		if (CleanupAction.RESTORE.equals(cleanupAction)) {
+			ORIGINAL_FILE_CONTENTS.put(filename, readFile(filename));
+			if (IS_CREATING_BACKUP_FILES) {
+				createFile(fullpath + ".bak", CleanupAction.REMOVE, ORIGINAL_FILE_CONTENTS.get(filename)); // Create backup first
+			}
+		}
+		FILES_TO_CLEANUP.add(new FileToCleanup(filename, cleanupAction));
+
+		Logger.getGlobal().info("Deleting file: " + fullpath);
+		new File(fullpath).delete();
+		FILES_TO_CLEANUP.removeIf(file -> (CleanupAction.NONE.equals(cleanupAction) || CleanupAction.REMOVE.equals(cleanupAction))
+				&& file.filename.equals(filename));
 	}
 
 	public static void deleteFile(String filename) throws Exception {
-		String fullpath = CLASSPATH + filename;
-		Logger.getGlobal().info("Deleting file: " + fullpath);
-		new File(fullpath).delete();
-		FILES_TO_CLEANUP.removeIf(file -> file.equals(filename));
+		deleteFile(filename, CleanupAction.RESTORE);
 	}
+
 }

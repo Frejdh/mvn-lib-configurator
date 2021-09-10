@@ -1,4 +1,4 @@
-package com.frejdh.util.environment.test;
+package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
 import org.junit.Assert;
@@ -6,7 +6,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.frejdh.util.environment.test.TestFileHelper.CleanupAction;
 import static org.junit.Assert.*;
 
 public class ParserTests extends AbstractTests {
@@ -24,10 +23,10 @@ public class ParserTests extends AbstractTests {
 		String propertyKey = "runtime.works.test1";
 		double propertyValue = 2.03;
 
-		TestFileHelper.writeToExistingFile(FILE_RUNTIME, propertyKey + "=0", CleanupAction.EMPTY); // To remove the possibility of failure due to a previous run
+		TestFileHelper.writeToExistingFile(FILE_RUNTIME, propertyKey + "=0", TestFileHelper.CleanupAction.EMPTY); // To remove the possibility of failure due to a previous run
 		Thread.sleep(1000);
 		assertEquals( "Initializing failed", 0, Config.getDouble(propertyKey, -1), 0);
-		TestFileHelper.writeToExistingFile(FILE_RUNTIME, String.format("%s=%s", propertyKey, propertyValue), CleanupAction.EMPTY);
+		TestFileHelper.writeToExistingFile(FILE_RUNTIME, String.format("%s=%s", propertyKey, propertyValue), TestFileHelper.CleanupAction.EMPTY);
 		Thread.sleep(1000);
 		assertEquals("Value not updated", propertyValue, Config.getDouble(propertyKey, -1), 0); // Should be found
 	}

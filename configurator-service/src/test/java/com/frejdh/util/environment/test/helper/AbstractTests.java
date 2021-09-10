@@ -1,8 +1,6 @@
-package com.frejdh.util.environment.test;
+package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
-import com.frejdh.util.environment.test.TestProperty;
-import com.frejdh.util.environment.test.TestPropertyRule;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Rule;

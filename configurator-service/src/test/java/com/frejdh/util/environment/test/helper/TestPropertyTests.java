@@ -1,10 +1,10 @@
-package com.frejdh.util.environment.test;
+package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import static com.frejdh.util.environment.test.AbstractTests.DYNAMIC_CLASS_PROPERTY_KEY;
+import static com.frejdh.util.environment.test.helper.AbstractTests.DYNAMIC_CLASS_PROPERTY_KEY;
 
 @TestProperty(key = DYNAMIC_CLASS_PROPERTY_KEY, value = "child")
 public class TestPropertyTests extends AbstractTests {

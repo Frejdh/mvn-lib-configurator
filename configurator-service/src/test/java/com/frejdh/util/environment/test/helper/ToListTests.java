@@ -1,4 +1,4 @@
-package com.frejdh.util.environment.test;
+package com.frejdh.util.environment.test.helper;
 
 import static org.junit.Assert.assertEquals;
 

@@ -1,4 +1,4 @@
-package com.frejdh.util.environment.test;
+package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
 import org.junit.Test;

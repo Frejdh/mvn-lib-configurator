@@ -1,6 +1,6 @@
 package com.frejdh.util.environment
 
-import com.frejdh.util.environment.test.ParserTests
+import com.frejdh.util.environment.test.helper.ParserTests
 import org.junit.Assert
 import org.junit.Test
 
