@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.frejdh.util</groupId>
         <artifactId>library-master-pom</artifactId>
-        <version>1.0.3</version>
+        <version>1.1.0</version>
     </parent>
 
     <groupId>com.frejdh.util.environment</groupId>
