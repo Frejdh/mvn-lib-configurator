@@ -135,8 +135,8 @@ public class TestFileHelper {
 			ORIGINAL_FILE_CONTENTS.putIfAbsent(filename, readFile(filename));
 		}
 
-		if (IS_CREATING_BACKUP_FILES && new File(fullpath).exists()) {
-			createFile(fullpath + ".bak", CleanupAction.REMOVE, ORIGINAL_FILE_CONTENTS.get(filename)); // Create backup first
+		if (IS_CREATING_BACKUP_FILES && !new File(fullpath).exists()) {
+			createFile(filename + ".bak", CleanupAction.REMOVE, ORIGINAL_FILE_CONTENTS.get(filename)); // Create backup first
 		}
 
 		FileWriter myWriter = new FileWriter(fullpath);

@@ -1,7 +1,7 @@
 package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ToMapTests extends AbstractTests {
 

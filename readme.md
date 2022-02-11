@@ -57,15 +57,13 @@ Usage example:
 ```java
 import com.frejdh.util.environment.Config;
 import com.frejdh.util.environment.test.TestProperty;
-import com.frejdh.util.environment.test.TestPropertyRule;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import com.frejdh.util.environment.test.TestPropertyExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(TestPropertyExtension.class)
 public class SampleTest {
-
-    @Rule
-    public final TestPropertyRule configRule = new TestPropertyRule();
 
     @Test
     @TestProperty(key = "my-property.example", value = "some value")

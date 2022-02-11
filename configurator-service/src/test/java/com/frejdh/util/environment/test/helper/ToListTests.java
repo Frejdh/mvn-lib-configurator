@@ -1,7 +1,5 @@
 package com.frejdh.util.environment.test.helper;
 
-import static org.junit.Assert.assertEquals;
-
 public class ToListTests extends AbstractTests {
 
 //	@Test

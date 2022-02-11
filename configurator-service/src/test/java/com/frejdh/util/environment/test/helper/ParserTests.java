@@ -1,21 +1,21 @@
 package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ParserTests extends AbstractTests {
 
 	@Test
 	public void errorHandlingWorks() {
-		Assert.assertEquals(50, Config.getInteger("env.test1.test-of-env-int1", 10)); // Should be found
+		assertEquals(50, Config.getInteger("env.test1.test-of-env-int1", 10)); // Should be found
 		assertEquals(50, Config.getInteger("property.does.not.exist", 50)); // Correct default value
 		assertNull(Config.getInteger("property.does.not.exist"));
-		Assert.assertThrows(IllegalArgumentException.class, () -> Config.get("env.test1.test-of-env-int1", ParserTests.class)); // Should throw
+		assertThrows(IllegalArgumentException.class, () -> Config.get("env.test1.test-of-env-int1", ParserTests.class)); // Should throw
 	}
 
 	@Test
@@ -25,10 +25,10 @@ public class ParserTests extends AbstractTests {
 
 		TestFileHelper.writeToExistingFile(FILE_RUNTIME, propertyKey + "=0", TestFileHelper.CleanupAction.EMPTY); // To remove the possibility of failure due to a previous run
 		Thread.sleep(1000);
-		assertEquals( "Initializing failed", 0, Config.getDouble(propertyKey, -1), 0);
+		assertEquals(0, Config.getDouble(propertyKey, -1), 0, "Initializing failed");
 		TestFileHelper.writeToExistingFile(FILE_RUNTIME, String.format("%s=%s", propertyKey, propertyValue), TestFileHelper.CleanupAction.EMPTY);
 		Thread.sleep(1000);
-		assertEquals("Value not updated", propertyValue, Config.getDouble(propertyKey, -1), 0); // Should be found
+		assertEquals(propertyValue, Config.getDouble(propertyKey, -1), 0, "Value not updated"); // Should be found
 	}
 
 	@Test
@@ -59,6 +59,18 @@ public class ParserTests extends AbstractTests {
 		for (String propertyKey : propertyKeys) {
 			assertEquals(expectedValue, Config.getString(propertyKey)); // Should be found
 		}
+	}
+
+	@Test
+	public void yamlPropertiesPickedUp() throws Exception {
+		final String propertiesFilename = "application.yml";
+		assertTrue(Config.getLoadedFiles().stream().anyMatch(file -> file.contains(propertiesFilename)));
+		restartConfigClass();
+
+		final String propertyKey = "env.test5.yaml";
+		final String expectedValue = "yes!";
+		assertEquals(expectedValue, Config.getString(propertyKey)); // Should be found
+		assertTrue(Config.getLoadedFiles().stream().anyMatch(file -> file.contains(propertiesFilename)));
 	}
 
 }

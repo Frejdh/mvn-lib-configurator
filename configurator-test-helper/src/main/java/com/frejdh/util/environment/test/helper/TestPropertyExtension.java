@@ -2,9 +2,11 @@ package com.frejdh.util.environment.test.helper;
 
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
+
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,12 +16,13 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-public class TestPropertyRule implements InvocationInterceptor  {
+public class TestPropertyExtension implements InvocationInterceptor {
 
 	private final Map<String, String> originalProperties = new HashMap<>();
+	private static final List<TestProperty> CLASS_ANNOTATIONS = new ArrayList<>();
 	private static final AtomicBoolean HAS_CONFIG_CLASS = new AtomicBoolean(true);
 
-	public TestPropertyRule() {
+	public TestPropertyExtension() {
 		originalProperties.putAll(System.getProperties().entrySet().stream().collect(
 				Collectors.toMap(
 						entry -> entry.getKey().toString(),
@@ -38,69 +41,69 @@ public class TestPropertyRule implements InvocationInterceptor  {
 		});
 	}
 
-	@NotNull
 	@Override
-	public Statement apply(@NotNull Statement base, @NotNull Description description) {
-		List<TestProperty> annotations = new ArrayList<>();
-		Class<?> objectClass = description.getTestClass();
+	public <T> T interceptTestClassConstructor(Invocation<T> invocation, ReflectiveInvocationContext<Constructor<T>> invocationContext, ExtensionContext extensionContext) throws Throwable {
+		CLASS_ANNOTATIONS.clear();
+		Class<?> objectClass = invocationContext.getExecutable().getDeclaringClass();
 
 		do {
-			addClassDefinedAnnotations(annotations, objectClass);
+			addClassDefinedAnnotations(objectClass);
 			objectClass = objectClass.getSuperclass();
 		} while (objectClass != null);
 
-		return new Statement() {
-			@Override
-			public void evaluate() throws Throwable {
-				addTestSpecificAnnotations(annotations, description);
-
-				try {
-					setPropertiesByAnnotations(annotations);
-					base.evaluate(); // This will run the test
-				} finally {
-					annotations.forEach(annotation -> {
-						String originalValue = originalProperties.get(annotation.key());
-						if (originalValue != null) {
-							System.setProperty(annotation.key(), originalValue);
-						}
-						else {
-							System.clearProperty(annotation.key());
-						}
-
-						if (HAS_CONFIG_CLASS.get()) {	// If 'com.frejdh.util.environment.Config' exists (optional)
-							setConfigProperty(annotation.key(), originalValue);
-						}
-					});
-				}
-			}
-		};
+		return invocation.proceed();
 	}
 
-	private void addClassDefinedAnnotations(@NotNull List<TestProperty> annotations, @NotNull Class<?> objectClass) {
+	@Override
+	public void interceptTestMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
+		List<TestProperty> annotations = new ArrayList<>(CLASS_ANNOTATIONS);
+		addTestSpecificAnnotations(annotations, invocationContext);
+
+		try {
+			setPropertiesByAnnotations(annotations);
+			invocation.proceed();
+		} finally {
+			annotations.forEach(annotation -> {
+				String originalValue = originalProperties.get(annotation.key());
+				if (originalValue != null) {
+					System.setProperty(annotation.key(), originalValue);
+				}
+				else {
+					System.clearProperty(annotation.key());
+				}
+
+				if (HAS_CONFIG_CLASS.get()) {	// If 'com.frejdh.util.environment.Config' exists (optional)
+					setConfigProperty(annotation.key(), originalValue);
+				}
+			});
+		}
+
+	}
+
+	private void addClassDefinedAnnotations(@NotNull Class<?> objectClass) {
 		if (objectClass.isAnnotationPresent(TestProperty.class)) {	// Class properties (single annotation)
-			annotations.addAll(0, Arrays.stream(objectClass.getAnnotationsByType(TestProperty.class))
+			CLASS_ANNOTATIONS.addAll(0, Arrays.stream(objectClass.getAnnotationsByType(TestProperty.class))
 					.collect(Collectors.toList()));
 		}
 		else if (objectClass.isAnnotationPresent(TestProperties.class)) {	// Class properties (multiple annotations)
-			annotations.addAll(0, Arrays.stream(objectClass.getAnnotationsByType(TestProperties.class))
+			CLASS_ANNOTATIONS.addAll(0, Arrays.stream(objectClass.getAnnotationsByType(TestProperties.class))
 					.flatMap(v -> Arrays.stream(v.value()))
 					.collect(Collectors.toList()));
 		}
 	}
 
-	private void addTestSpecificAnnotations(@NotNull List<TestProperty> annotations, @NotNull Description description) {
-		annotations.addAll(description.getAnnotations().stream()
+	private void addTestSpecificAnnotations(@NotNull List<TestProperty> annotations, @NotNull ReflectiveInvocationContext<Method> invocationContext) {
+		annotations.addAll(Arrays.stream(invocationContext.getExecutable().getAnnotations())
 				.filter(annotation -> annotation.annotationType().isAssignableFrom(TestProperty.class))
 				.map(annotation -> (TestProperty) annotation)
 				.collect(Collectors.toList()));
 
-		annotations.addAll(description.getAnnotations().stream()
+		annotations.addAll(Arrays.stream(invocationContext.getExecutable().getAnnotations())
 				.filter(annotation -> annotation.annotationType().isAssignableFrom(TestProperties.class))
 				.flatMap(testAnnotations -> Arrays.stream(((TestProperties) testAnnotations).value()))
 				.collect(Collectors.toList()));
 	}
 
-	@SuppressWarnings("JavaReflectionMemberAccess")
 	private void setConfigProperty(String key, String value) {
 		try {
 			Class<?> configClass = Class.forName("com.frejdh.util.environment.Config");

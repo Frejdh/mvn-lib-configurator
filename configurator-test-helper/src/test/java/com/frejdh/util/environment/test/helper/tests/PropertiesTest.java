@@ -2,21 +2,21 @@ package com.frejdh.util.environment.test.helper.tests;
 
 import com.frejdh.util.environment.test.helper.TestProperties;
 import com.frejdh.util.environment.test.helper.TestProperty;
-import com.frejdh.util.environment.test.helper.TestPropertyRule;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import com.frejdh.util.environment.test.helper.TestPropertyExtension;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+@ExtendWith(TestPropertyExtension.class)
 public class PropertiesTest {
 
 	private static final String PROPERTY_PATH = "test.property1";
 	private static final String ADDITIONAL_PROPERTY_PATH = "test.property2";
 
-	@Rule
-	public final TestPropertyRule configRule = new TestPropertyRule();
-
-	@AfterClass
+	@AfterAll
 	public static void checkPropertiesRestoredAfterTests() {
 		assertNull(System.getProperty(PROPERTY_PATH));
 		assertNull(System.getProperty(ADDITIONAL_PROPERTY_PATH));
@@ -41,18 +41,16 @@ public class PropertiesTest {
 	}
 
 
+	@ExtendWith(TestPropertyExtension.class)
 	@TestProperty(key = ADDITIONAL_PROPERTY_PATH, value = "annotatedClass")
 	public static class ClassWithPropertyAnnotation {
-
-		@Rule
-		public final TestPropertyRule configRule = new TestPropertyRule();
 
 		@Test
 		public void classesCanBeAnnotated() {
 			assertEquals("annotatedClass", System.getProperty(ADDITIONAL_PROPERTY_PATH));
 		}
 
-		@AfterClass
+		@AfterAll
 		public static void checkPropertiesRestoredAfterTests() {
 			assertNull(System.getProperty(PROPERTY_PATH));
 			assertNull(System.getProperty(ADDITIONAL_PROPERTY_PATH));

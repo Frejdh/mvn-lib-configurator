@@ -122,7 +122,7 @@ public class Config {
 	}
 
 	private static List<String> getAdditionalConfigFilesByEnvName(String envName) {
-		return ConversionUtils.getStringAsList(getString(envName, ""), ",")
+		return ConversionUtils.getStringAsList(get(envName, "", String.class, false, false), ",")
 				.stream().filter(str -> str != null && !str.isEmpty()).map(String::trim).collect(Collectors.toList());
 	}
 
@@ -201,9 +201,10 @@ public class Config {
 		}
 	}
 
-	// Internal. Set if the property should be fetched runtime or not.
-	private static <T> T get(String key, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
-		waitForInitialization();
+	private static <T> T get(String key, Class<T> returnType, boolean isRuntimeEnabled, boolean waitForInitialization) throws IllegalArgumentException {
+		if (waitForInitialization) {
+			waitForInitialization();
+		}
 
 //		String stringValue = environmentVariables.getProperty(key);
 		String keyArrayIndex = key.matches(ARRAY_PATTERN_FOR_KEY.pattern()) ? key.substring(key.lastIndexOf("[") + 1, key.lastIndexOf("]")) : null;
@@ -215,6 +216,11 @@ public class Config {
 		}
 
 		return null;
+	}
+
+	// Internal. Set if the property should be fetched runtime or not.
+	private static <T> T get(String key, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
+		return get(key, returnType, isRuntimeEnabled, true);
 	}
 
 	/**
@@ -230,9 +236,14 @@ public class Config {
 	}
 
 	// Internal. Set if the property should be fetched runtime or not.
-	private static <T> T get(String key, T defaultValue, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
-		T result = get(key, returnType, isRuntimeEnabled);
+	private static <T> T get(String key, T defaultValue, Class<T> returnType, boolean isRuntimeEnabled, boolean waitForInitialization) throws IllegalArgumentException {
+		T result = get(key, returnType, isRuntimeEnabled, waitForInitialization);
 		return result != null ? result : ConversionUtils.convertStringToType(defaultValue.toString(), returnType);
+	}
+
+	// Internal. Set if the property should be fetched runtime or not.
+	private static <T> T get(String key, T defaultValue, Class<T> returnType, boolean isRuntimeEnabled) throws IllegalArgumentException {
+		return get(key, defaultValue, returnType, isRuntimeEnabled, true);
 	}
 
 	/**

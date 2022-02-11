@@ -1,13 +1,14 @@
 package com.frejdh.util.environment.test.helper;
 
 import com.frejdh.util.environment.Config;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import java.lang.reflect.Method;
 import java.util.logging.Logger;
 
-
+@ExtendWith(TestPropertyExtension.class)
 @TestProperty(key = "class-property-dynamic", value = "parent")
 @TestProperty(key = "class-property-fixed", value = "absolute")
 public abstract class AbstractTests {
@@ -17,9 +18,6 @@ public abstract class AbstractTests {
 	public static final String FIXED_CLASS_PROPERTY_KEY = "class-property-fixed";
 	public static final String FIXED_CLASS_PROPERTY_VALUE = "absolute";
 
-	@Rule
-	public final TestPropertyRule configRule = new TestPropertyRule();
-
 	protected void restartConfigClass() throws Exception {
 		Method method = Config.class.getDeclaredMethod("init");
 		method.setAccessible(true);
@@ -27,12 +25,12 @@ public abstract class AbstractTests {
 		method.setAccessible(false);
 	}
 
-	@After
+	@AfterEach
 	public void cleanup() throws Exception {
 		TestFileHelper.cleanup();
 	}
 
-	@BeforeClass
+	@BeforeAll
 	public static void initLoggerAndPrintInfo() {
 		System.setProperty("handlers", "java.util.logging.ConsoleHandler");
 		System.setProperty(".level", "ALL");
