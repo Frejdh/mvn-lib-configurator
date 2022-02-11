@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.frejdh.util.environment</groupId>
+        <artifactId>configurator</artifactId>
+        <version>2.0.0</version>
+    </parent>
+
+    <artifactId>configurator-service</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.frejdh.util</groupId>
+            <artifactId>file-watcher</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.frejdh.util.common</groupId>
+            <artifactId>ansi-logger</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.frejdh.util.common</groupId>
+            <artifactId>common-toolbox</artifactId>
+        </dependency>
+
+        <!-- TODO: Remove and replace all implementations with jackson -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-json-org</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <!--<dependency>
+            <groupId>com.google.auto.service</groupId>
+            <artifactId>auto-service</artifactId>
+            <version>1.0-rc7</version>
+            <scope>provided</scope>
+        </dependency>-->
+
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.frejdh.util.environment</groupId>
+            <artifactId>configurator-test-helper</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
