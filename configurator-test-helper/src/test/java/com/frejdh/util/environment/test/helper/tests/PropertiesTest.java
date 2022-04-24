@@ -4,6 +4,7 @@ import com.frejdh.util.environment.test.helper.TestProperties;
 import com.frejdh.util.environment.test.helper.TestProperty;
 import com.frejdh.util.environment.test.helper.TestPropertyExtension;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -16,8 +17,8 @@ public class PropertiesTest {
 	private static final String PROPERTY_PATH = "test.property1";
 	private static final String ADDITIONAL_PROPERTY_PATH = "test.property2";
 
-	@AfterAll
-	public static void checkPropertiesRestoredAfterTests() {
+	@AfterEach
+	public void assertPropertiesRestoredAfterTests() {
 		assertNull(System.getProperty(PROPERTY_PATH));
 		assertNull(System.getProperty(ADDITIONAL_PROPERTY_PATH));
 	}
@@ -40,10 +41,9 @@ public class PropertiesTest {
 		assertEquals("otherValue4", System.getProperty(ADDITIONAL_PROPERTY_PATH));
 	}
 
-
 	@ExtendWith(TestPropertyExtension.class)
 	@TestProperty(key = ADDITIONAL_PROPERTY_PATH, value = "annotatedClass")
-	public static class ClassWithPropertyAnnotation {
+	public static class ClassWithPropertyAnnotationTest {
 
 		@Test
 		public void classesCanBeAnnotated() {

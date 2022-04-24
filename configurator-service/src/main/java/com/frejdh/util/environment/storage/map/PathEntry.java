@@ -1,10 +1,14 @@
 package com.frejdh.util.environment.storage.map;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsonorg.JsonOrgModule;
+import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +34,9 @@ public class PathEntry<V> {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
 			.registerModule(new JsonOrgModule()) // To convert org.json classes
-			.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
+			.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+			.enable(SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED)
+			.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
 	public PathEntry(PathEntry<V> parent, Map<String, PathEntry<V>> children, String entryKey, List<V> fieldValues, Class<V> valueClass) {
 		this.parent = parent;
@@ -74,8 +80,12 @@ public class PathEntry<V> {
 		return fieldValues;
 	}
 
+	public List<V> getValuesOrEmptyList() {
+		return fieldValues != null ? fieldValues : new ArrayList<>();
+	}
+
 	public List<V> getValues(String key) {
-		PathEntry<V> entry = getChildEntry(key);
+		PathEntry<V> entry = getPathEntryByKey(key);
 		return entry != null ? entry.getValues() : null;
 	}
 
@@ -89,7 +99,7 @@ public class PathEntry<V> {
 	}
 
 	public V getFirstValue(String key) {
-		PathEntry<V> entry = getChildEntry(key);
+		PathEntry<V> entry = getPathEntryByKey(key);
 		List<V> entryFieldValues = entry != null ? entry.fieldValues : null;
 		return (entryFieldValues != null && !entryFieldValues.isEmpty()) ? entryFieldValues.get(0) : null;
 	}
@@ -109,7 +119,7 @@ public class PathEntry<V> {
 	}
 
 	public V getLastValue(String key) {
-		PathEntry<V> entry = getChildEntry(key);
+		PathEntry<V> entry = getPathEntryByKey(key);
 		List<V> entryFieldValues = entry != null ? entry.fieldValues : null;
 		return (entryFieldValues != null && !entryFieldValues.isEmpty()) ? entryFieldValues.get(entryFieldValues.size() - 1) : null;
 	}
@@ -119,15 +129,15 @@ public class PathEntry<V> {
 		return value != null ? value : defaultValue;
 	}
 
-	public PathEntry<V> getChildEntry(String fullKey) {
+	public PathEntry<V> getPathEntryByKey(String fullKey) {
 		String nextKey = fullKey.contains(".") ? fullKey.substring(0, fullKey.indexOf(".")) : fullKey;
 		if (!children.containsKey(nextKey)) {
 			return null;
 		}
-		return getChildEntry(fullKey, nextKey);
+		return getPathEntryByKey(fullKey, nextKey);
 	}
 
-	private PathEntry<V> getChildEntry(String fullKey, String fullKeyForCurrentIteration) {
+	private PathEntry<V> getPathEntryByKey(String fullKey, String fullKeyForCurrentIteration) {
 		String currentChildKey = fullKeyForCurrentIteration.contains(".") && !fullKeyForCurrentIteration.endsWith(".")
 				? fullKeyForCurrentIteration.substring(fullKeyForCurrentIteration.lastIndexOf(".") + 1)
 				: fullKeyForCurrentIteration;
@@ -144,7 +154,7 @@ public class PathEntry<V> {
 			nextChildKey = nextChildKey.substring(0, nextChildKey.indexOf("."));
 		}
 		String fullKeyForNextIteration = fullKeyForCurrentIteration + "." + nextChildKey;
-		return child.getChildEntry(fullKey, fullKeyForNextIteration);
+		return child.getPathEntryByKey(fullKey, fullKeyForNextIteration);
 	}
 
 	/**
@@ -275,12 +285,12 @@ public class PathEntry<V> {
 		return !children.isEmpty();
 	}
 
-	public boolean hasFieldValue() {
+	public boolean hasFieldValues() {
 		return !fieldValues.isEmpty();
 	}
 
 	public <T> T toObject(String key, Class<T> toClass) {
-		PathEntry<V> entry = getChildEntry(key);
+		PathEntry<V> entry = getPathEntryByKey(key);
 		return entry != null ? toObject(entry, toClass) : null;
 	}
 
@@ -289,7 +299,7 @@ public class PathEntry<V> {
 	}
 
 	private <T> T toObject(PathEntry<V> entry, Class<T> toClass) {
-		JSONObject jsonObject = toJsonObject(entry);
+		JSONObject jsonObject = toJsonObject(entry, new JSONObject());
 		return OBJECT_MAPPER.convertValue(jsonObject, toClass);
 	}
 
@@ -300,36 +310,89 @@ public class PathEntry<V> {
 		)));
 	}
 
-	public HashMap<String, Object> toHashMap(String key) {
-		PathEntry<V> child = getChildEntry(key);
+//	@SuppressWarnings("unchecked")
+//	public <T> HashMap<String, T> toHashMap(String key, Class<T> innerObjectsClass) {
+//		PathEntry<V> child = getPathEntryByKey(key);
+//		if (child == null) {
+//			return null;
+//		}
+//
+//		Map<String, T> retval = new HashMap<>();
+//		child.getMapEntrySet().forEach(entry -> {
+//			List<V> fieldValues = entry.getValue().getValuesOrEmptyList();
+//
+//			// Map/convert objects if not generic object class is used
+//			List<T> convertedFieldValues = innerObjectsClass.equals(Object.class)
+//					? (List<T>) fieldValues
+//					: fieldValues.stream().map(val -> child.toObject(innerObjectsClass)).collect(Collectors.toList());
+//
+//			if (!fieldValues.isEmpty()) {
+//				retval.put(entry.getKey(), convertedFieldValues);
+//			}
+//		});
+//		return retval;
+//	}
+
+	public LinkedPathMultiMap<Object> toMultiMap(String key) {
+		return toMultiMap(key, Object.class);
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T> LinkedPathMultiMap<T> toMultiMap(String key, Class<T> innerObjectsClass) {
+		PathEntry<V> child = getPathEntryByKey(key);
 		if (child == null) {
 			return null;
 		}
 
-		HashMap<String, Object> retval = new HashMap<>();
+		LinkedPathMultiMap<T> retval = new LinkedPathMultiMap<>();
+		child.getMapEntrySet().forEach(entry -> {
+			String entryKeyWithoutParent = entry.getKey().replaceFirst("^" + Pattern.quote(key + "."), "");
+			List<V> fieldValues = entry.getValue().getValuesOrEmptyList();
 
-		Object obj = this.getMapEntrySet();
+			// Map/convert objects if not generic object class is used
+			List<T> convertedFieldValues = innerObjectsClass.equals(Object.class)
+					? (List<T>) fieldValues
+					: child.children.values().stream()
+							.map(vPathEntry -> vPathEntry.toObject(innerObjectsClass))
+							.collect(Collectors.toList());
 
-		this.getMapEntrySet().forEach(entry -> {
-			List<V> fieldValues = entry.getValue().getValues();
-			retval.put(entry.getKey(), fieldValues);
-			for (int i = 0; i < fieldValues.size(); i++) {
-				if (!entry.getKey().matches(".+\\[\\d+]")) {
-					retval.put(entry.getKey() + "[" + i + "]", fieldValues.get(i));
-				}
+			if (!convertedFieldValues.isEmpty() && StringUtils.isNotBlank(entryKeyWithoutParent)) {
+				retval.put(entryKeyWithoutParent, convertedFieldValues);
 			}
 		});
+
 		return retval;
 	}
 
-	private JSONObject toJsonObject(PathEntry<V> entry) {
+//	@SuppressWarnings("unchecked")
+//	public LinkedPathMultiMap<Object> toMultiMap(String key) {
+//		PathEntry<V> child = getPathEntryByKey(key);
+//		if (child == null) {
+//			return null;
+//		}
+//
+//		LinkedPathMultiMap<V> retval = new LinkedPathMultiMap<>();
+//		child.getMapEntrySet().forEach(entry -> {
+//			List<V> fieldValues = entry.getValue().getValuesOrEmptyList();
+//			if (!fieldValues.isEmpty()) {
+//				retval.put(entry.getKey(), fieldValues);
+//			}
+//		});
+//		return (LinkedPathMultiMap<Object>) retval;
+//	}
+
+	private JSONObject toJsonObject(PathEntry<V> entry, JSONObject parentJson) {
 		if (entry == null) {
 			return null;
 		}
-		JSONObject retval = new JSONObject();
-		retval.put(entry.entryKey, entry.fieldValues);
-		entry.children.forEach((childKey, childValue) -> retval.put(childKey, toJsonObject(childValue)));
-		return retval;
+		JSONObject childJson = new JSONObject();
+		if (entry.hasFieldValues()) {
+			parentJson.put(entry.entryKey, entry.fieldValues.size() == 1 ? entry.fieldValues.get(0) : entry.fieldValues);
+		}
+		else {
+			entry.children.forEach((childKey, childValue) -> parentJson.put(childKey, toJsonObject(childValue, childJson)));
+		}
+		return childJson;
 	}
 
 	public static <V> PathEntryBuilder<V> builder(Class<V> valueClass) {
@@ -345,16 +408,20 @@ public class PathEntry<V> {
 	}
 
 	public String toString(boolean includeChildren) {
-		StringBuilder sb = new StringBuilder("PathEntry{ key = '").append(fullKey).append("', children = [");
+		StringBuilder sb = new StringBuilder("PathEntry{ key = '")
+				.append(fullKey)
+				.append("', children = [")
+				.append(String.join(", ", children.keySet()))
+				.append("], values = [")
+				.append(fieldValues.stream().map(Object::toString).collect(Collectors.joining(", ")))
+				.append("] }");
+
 		if (includeChildren) {
-			sb.append(String.join(", ", children.entrySet().stream().map(children -> children.getValue().toString()).collect(Collectors.joining(", "))));
+			sb.append("\n")
+					.append(String.join(", ", children.values().stream()
+					.map(child -> child.toString(includeChildren))
+					.collect(Collectors.joining(", "))));
 		}
-		else {
-			sb.append(String.join(", ", children.keySet()));
-		}
-		sb.append("], values = [");
-		sb.append(fieldValues.stream().map(Object::toString).collect(Collectors.joining(", ")));
-		sb.append("] }");
 		return sb.toString();
 	}
 

@@ -1,6 +1,7 @@
 package com.frejdh.util.environment.storage.map;
 
 import com.google.common.reflect.TypeToken;
+import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import java.util.AbstractMap;
@@ -152,7 +153,7 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 		if (key == null) {
 			return null;
 		}
-		return rootEntry.getChildEntry(keyString);
+		return rootEntry.getPathEntryByKey(keyString);
 	}
 
 	@Override
@@ -196,20 +197,6 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 		return getLastOrDefault(key, null);
 	}
 
-
-	@Nullable
-	@Override
-	public List<V> put(@NotNull String key, List<V> values) {
-		key = cleanupPropertyKey(key);
-		values = cleanupStringValue(values);
-
-		PathEntry<V> baseElement = rootEntry.getChildEntry(key);
-		List<V> previousValue = baseElement != null ? baseElement.getValues() : null;
-		int nrOfElementsAdded = rootEntry.put(key, values);
-		size += nrOfElementsAdded;
-		return previousValue;
-	}
-
 	/**
 	 * Puts a value into the map and replaces the existing values completely.
 	 * @param key
@@ -221,7 +208,25 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 		return this.put(key, values);
 	}
 
+	@Nullable
+	@Override
+	public List<V> put(@NotNull String key, List<V> values) {
+		key = cleanupPropertyKey(key);
+		values = cleanupStringValue(values);
+
+		PathEntry<V> baseElement = rootEntry.getPathEntryByKey(key);
+		List<V> previousValue = baseElement != null ? baseElement.getValues() : null;
+		int nrOfElementsAdded = rootEntry.put(key, values);
+		size += nrOfElementsAdded;
+		return previousValue;
+	}
+
 	public List<V> put(@NotNull String key, V value) {
+		if (value instanceof List) {
+			//noinspection unchecked
+			return put(key, (List<V>) value);
+		}
+
 		return put(key, Collections.singletonList(value));
 	}
 
@@ -232,7 +237,7 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 			return null;
 		}
 
-		PathEntry<V> baseElement = rootEntry.getChildEntry(keyString);
+		PathEntry<V> baseElement = rootEntry.getPathEntryByKey(keyString);
 		List<V> previousValue = baseElement != null ? baseElement.getValues() : null;
 		if (baseElement == null) {
 			baseElement = getDefaultValue();
@@ -276,8 +281,8 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 		return rootEntry.toHashMap();
 	}
 
-	public HashMap<String, Object> toHashMap(String key) {
-		return rootEntry.toHashMap(key);
+	public <T> LinkedPathMultiMap<T> toMultiMap(String key, Class<T> innerObjectsClass) {
+		return rootEntry.toMultiMap(key, innerObjectsClass);
 	}
 
 	@NotNull

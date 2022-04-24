@@ -3,6 +3,9 @@ Changes for each version.
 
 ## 2.1.0 (Not released)
 - #### TODO: Variable substitution for `${example.my-variable:default-value}` syntax.
+- Split `getMap` into `getHashMap` and `getMultiMap` methods.
+- Fixed bug where to many entries could appear in a fetched map.
+- Added optional class conversion parameters for `getMap` and `getList`.
 
 ## 2.0.0 
 - Added `getMap` and `getObject` implementations.

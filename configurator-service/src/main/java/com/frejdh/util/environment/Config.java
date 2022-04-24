@@ -49,7 +49,7 @@ public class Config {
 	private static void init() {
 		LOGGER.setLevel(Level.ALL);
 		setDefaultFilesToLoad();
-		loadEnvironmentVariables(true);
+		refresh(true);
 		initRuntimeWatcher();
 	}
 
@@ -126,12 +126,13 @@ public class Config {
 				.stream().filter(str -> str != null && !str.isEmpty()).map(String::trim).collect(Collectors.toList());
 	}
 
-	public static void loadEnvironmentVariables(boolean force) {
+	public static void refresh(boolean force) {
 		if (force || !isInitialized()) {
 			synchronized (Config.class) {
 				if (!force && isInitialized())
 					return;
 
+				properties.clear();
 				loadVariablesFromFiles();
 				loadVariablesFromAdditionalFiles();
 				loadVariablesFromProgram();
@@ -300,22 +301,41 @@ public class Config {
 		return Optional.ofNullable(!list.isEmpty() ? list : null);
 	}
 
+	// TODO: Implement, again
+//	/**
+//	 * Get all of the properties as a HashMap.
+//	 * @param key Name of the property
+//	 * @return A HashMap
+//	 */
+//	public static Map<String, List<Object>> getHashMap(String key) {
+//		return properties.toMultiMap(key);
+//	}
+
 	/**
 	 * Get all of the properties as a HashMap.
 	 * @param key Name of the property
 	 * @return A HashMap
 	 */
-	public static Map<String, Object> getMap(String key) {
-		return properties.toHashMap(key);
+	public static Map<String, List<Object>> getMultiMap(String key) {
+		return properties.toMultiMap(key, Object.class);
 	}
 
 	/**
-	 * Get all of the properties as an optional HashMap.
+	 * Get all properties as a MultiMap.
 	 * @param key Name of the property
-	 * @return An optional HashMap
+	 * @return A HashMap, or null of nothing was found
 	 */
-	public static Optional<Map<String, Object>> getOptionalMap(String key) {
-		return Optional.ofNullable(getMap(key));
+	public static <T> Map<String, List<T>> getMultiMap(String key, Class<T> innerObjectsClass) {
+		return properties.toMultiMap(key, innerObjectsClass);
+	}
+
+	/**
+	 * Get all properties as an optional MultiMap.
+	 * @param key Name of the property
+	 * @return An optional that could contain a found MultiMap
+	 */
+	public static Optional<Map<String, List<Object>>> getOptionalMultiMap(String key) {
+		return Optional.ofNullable(getMultiMap(key));
 	}
 
 	/**
@@ -722,7 +742,7 @@ public class Config {
 	}
 
 	/**
-	 * Private setter method that is hidden for common usage. Mostly used through reflection.
+	 * Private setter method that is hidden for common usage
 	 */
 	private static void set(String key, Object value) {
 		if (key == null) {

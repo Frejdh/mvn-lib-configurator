@@ -74,6 +74,7 @@ public class TestPropertyExtension implements InvocationInterceptor {
 
 				if (HAS_CONFIG_CLASS.get()) {	// If 'com.frejdh.util.environment.Config' exists (optional)
 					setConfigProperty(annotation.key(), originalValue);
+					refreshConfig();
 				}
 			});
 		}
@@ -111,6 +112,19 @@ public class TestPropertyExtension implements InvocationInterceptor {
 			method.setAccessible(true);
 			method.invoke(null, key, value);
 			method.setAccessible(false);
+		} catch (ClassNotFoundException | NoSuchMethodException ignored) {
+			HAS_CONFIG_CLASS.set(false);
+		} catch (Exception e) {
+			e.printStackTrace();
+			HAS_CONFIG_CLASS.set(false);
+		}
+	}
+
+	private void refreshConfig() {
+		try {
+			Class<?> configClass = Class.forName("com.frejdh.util.environment.Config");
+			Method method = configClass.getDeclaredMethod("refresh", boolean.class);
+			method.invoke(null, true);
 		} catch (ClassNotFoundException | NoSuchMethodException ignored) {
 			HAS_CONFIG_CLASS.set(false);
 		} catch (Exception e) {

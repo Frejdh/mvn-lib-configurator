@@ -18,6 +18,9 @@ public abstract class AbstractTests {
 	public static final String FIXED_CLASS_PROPERTY_KEY = "class-property-fixed";
 	public static final String FIXED_CLASS_PROPERTY_VALUE = "absolute";
 
+	public static final String MAP_PROPERTY = "some.map";
+	public static final String MAP_PROPERTY_WITH_DOT = MAP_PROPERTY + ".";
+
 	protected void restartConfigClass() throws Exception {
 		Method method = Config.class.getDeclaredMethod("init");
 		method.setAccessible(true);
