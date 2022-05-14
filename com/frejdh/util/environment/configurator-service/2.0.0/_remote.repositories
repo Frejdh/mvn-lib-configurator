@@ -1,6 +1,0 @@
-#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
-#Fri Feb 11 22:58:38 CET 2022
-configurator-service-2.0.0.jar>=
-configurator-service-2.0.0-javadoc.jar>=
-configurator-service-2.0.0.pom>=
-configurator-service-2.0.0-sources.jar>=
