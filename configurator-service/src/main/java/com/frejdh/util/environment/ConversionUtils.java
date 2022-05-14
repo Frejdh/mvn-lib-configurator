@@ -1,11 +1,19 @@
 package com.frejdh.util.environment;
 
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.lang.NonNull;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.isNull;
 
 public class ConversionUtils {
 
@@ -68,6 +76,56 @@ public class ConversionUtils {
 				.filter(element -> element != null && !element.isEmpty())
 				.map(str -> shouldTrim ? str.trim() : str)
 				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Converts a generic Map with potentially nested Map values (or normal Object values), to a single Map.
+	 * Nested properties are defined with dots.
+	 * @param mapToConvert The Map to flatten
+	 * @return A new Map instance.
+	 */
+	@NonNull
+	public static <T> Map<String, T> flattenMap(Map<?, T> mapToConvert) {
+		final Map<String, T> propertiesMap = new HashMap<>();
+
+		if (isNull(mapToConvert)) {
+			return propertiesMap;
+		}
+
+		return flattenMap(mapToConvert, propertiesMap, "");
+	}
+
+	@SuppressWarnings("unchecked")
+	@NonNull
+	private static <T> Map<String, T> flattenMap(final Map<?, T> mapToConvert,
+												  final Map<String, T> propertiesMap,
+												  final String currentKey) {
+
+		mapToConvert.forEach((key, value) -> {
+			String nextKey = StringUtils.isBlank(currentKey)
+					? Objects.toString(key, "")
+					: currentKey + "." + Objects.toString(key, "");
+
+			if (value instanceof Map) {
+				Map<Object, T> mapValue = (Map<Object, T>) value;
+				if (!mapValue.isEmpty()) {
+					flattenMap(mapValue, propertiesMap, nextKey);
+				}
+			}
+			else {
+				propertiesMap.put(nextKey, value);
+			}
+		});
+
+		return propertiesMap;
+	}
+
+	public static String toKebabCase(String str) {
+		return (str != null)
+			? str.trim()
+				.replace("_", ".")
+				.replaceAll("([a-z])([A-Z])", "$1-$2").toLowerCase()
+			: null;
 	}
 
 }

@@ -1,5 +1,6 @@
 package com.frejdh.util.environment.storage.map;
 
+import com.frejdh.util.environment.ConversionUtils;
 import com.google.common.reflect.TypeToken;
 import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
@@ -68,11 +69,7 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 	}
 
 	private String cleanupPropertyKey(String key) {
-		return cleanupKeys && key != null
-				? key.trim()
-					.replace("_", ".")
-					.replaceAll("([a-z])([A-Z])", "$1-$2").toLowerCase()
-				: key;
+		return cleanupKeys ? ConversionUtils.toKebabCase(key) : key;
 	}
 
 	private String removeArraySuffix(Object key) {
@@ -279,6 +276,10 @@ public class LinkedPathMultiMap<V> implements Map<String, List<V>> {
 	 */
 	public HashMap<String, Object> toHashMap() {
 		return rootEntry.toHashMap();
+	}
+
+	public <T> HashMap<String, T> toHashMap(String key, Class<T> innerObjectsClass) {
+		return rootEntry.toHashMap(key, innerObjectsClass);
 	}
 
 	public <T> LinkedPathMultiMap<T> toMultiMap(String key, Class<T> innerObjectsClass) {

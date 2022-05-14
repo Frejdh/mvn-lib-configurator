@@ -4,6 +4,8 @@ import com.frejdh.util.environment.storage.map.LinkedPathMultiMap;
 import com.frejdh.util.watcher.StorageWatcher;
 import com.frejdh.util.watcher.StorageWatcherBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.lang.NonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.StandardWatchEventKinds;
@@ -301,20 +303,53 @@ public class Config {
 		return Optional.ofNullable(!list.isEmpty() ? list : null);
 	}
 
-	// TODO: Implement, again
-//	/**
-//	 * Get all of the properties as a HashMap.
-//	 * @param key Name of the property
-//	 * @return A HashMap
-//	 */
-//	public static Map<String, List<Object>> getHashMap(String key) {
-//		return properties.toMultiMap(key);
-//	}
+	/**
+	 * Get all properties as a HashMap.
+	 * @param key Name of the property
+	 * @return A HashMap, or null of nothing was found
+	 */
+	@NonNull
+	public static Map<String, List<Object>> getFlattenedPathMultiMap(String key) {
+		return getFlattenedPathMultiMap(key, Object.class);
+	}
 
 	/**
-	 * Get all of the properties as a HashMap.
+	 * Get all properties as a HashMap.
 	 * @param key Name of the property
-	 * @return A HashMap
+	 * @param subType The class that the property elements shall be returned as
+	 * @param <T> The supplied type
+	 * @return A HashMap, or null of nothing was found
+	 */
+	@NonNull
+	public static <T> Map<String, List<T>> getFlattenedPathMultiMap(String key, Class<T> subType) {
+		Map<String, List<T>> original = getMultiMap(key, subType);
+		return ConversionUtils.flattenMap(original);
+	}
+
+	/**
+	 * Get all properties as a HashMap.
+	 * @param key Name of the property
+	 * @param innerObjectsClass Return type of the map object
+	 * @return A HashMap, or null of nothing was found
+	 */
+	public static <T> Map<String, T> getSimpleMap(String key, Class<T> innerObjectsClass) {
+		return properties.toHashMap(key, innerObjectsClass);
+	}
+
+	/**
+	 * Get all properties as an optional HashMap.
+	 * @param key Name of the property
+	 * @param innerObjectsClass Return type of the map object
+	 * @return An optional that could contain a found HashMap
+	 */
+	public static <T> Optional<Map<String, T>> getOptionalSimpleMap(String key, Class<T> innerObjectsClass) {
+		return Optional.ofNullable(getSimpleMap(key, innerObjectsClass));
+	}
+
+	/**
+	 * Get all of the properties as a MultiMap.
+	 * @param key Name of the property
+	 * @return A HashMap, or null of nothing was found
 	 */
 	public static Map<String, List<Object>> getMultiMap(String key) {
 		return properties.toMultiMap(key, Object.class);
@@ -323,7 +358,8 @@ public class Config {
 	/**
 	 * Get all properties as a MultiMap.
 	 * @param key Name of the property
-	 * @return A HashMap, or null of nothing was found
+	 * @param innerObjectsClass Return type of the map object
+	 * @return A MultiMap, or null of nothing was found
 	 */
 	public static <T> Map<String, List<T>> getMultiMap(String key, Class<T> innerObjectsClass) {
 		return properties.toMultiMap(key, innerObjectsClass);
@@ -336,6 +372,16 @@ public class Config {
 	 */
 	public static Optional<Map<String, List<Object>>> getOptionalMultiMap(String key) {
 		return Optional.ofNullable(getMultiMap(key));
+	}
+
+	/**
+	 * Get all properties as an optional MultiMap.
+	 * @param key Name of the property
+	 * @param innerObjectsClass Return type of object
+	 * @return An optional that could contain a found MultiMap
+	 */
+	public static <T> Optional<Map<String, List<T>>> getOptionalMultiMap(String key, Class<T> innerObjectsClass) {
+		return Optional.ofNullable(getMultiMap(key, innerObjectsClass));
 	}
 
 	/**

@@ -54,7 +54,7 @@ public class TestFileHelper {
 
 	/**
 	 * Run the cleanup method for the test files. Removes/restores/empties the relevant files.
-	 * Suggestively should be called in either "@After" or "@AfterEach" when using Junit.
+	 * Suggestively should be called in either "@After" (Junit 4) or "@AfterEach" (Junit 5).
 	 * @throws IOException When a file could not be restored properly.
 	 */
 	public static void cleanup() throws IOException {

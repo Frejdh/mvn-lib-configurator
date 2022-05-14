@@ -20,6 +20,7 @@ public class TestPropertyExtension implements InvocationInterceptor {
 
 	private final Map<String, String> originalProperties = new HashMap<>();
 	private static final List<TestProperty> CLASS_ANNOTATIONS = new ArrayList<>();
+	private final List<TestProperty> testMethodAnnotations = new ArrayList<>();
 	private static final AtomicBoolean HAS_CONFIG_CLASS = new AtomicBoolean(true);
 
 	public TestPropertyExtension() {
@@ -31,8 +32,8 @@ public class TestPropertyExtension implements InvocationInterceptor {
 	}
 
 	@SneakyThrows
-	protected void setPropertiesByAnnotations(List<TestProperty> annotations) {
-		annotations.forEach(annotation -> {
+	protected void setPropertiesByAnnotations() {
+		getClassAndMethodAnnotations().forEach(annotation -> {
 			System.setProperty(annotation.key(), annotation.value());
 
 			if (HAS_CONFIG_CLASS.get()) {	// If 'com.frejdh.util.environment.Config' exists (optional), also update the Config class while at it
@@ -55,15 +56,32 @@ public class TestPropertyExtension implements InvocationInterceptor {
 	}
 
 	@Override
+	public void interceptBeforeAllMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
+		Class<?> objectClass = invocationContext.getExecutable().getDeclaringClass();
+
+		do {
+			addClassDefinedAnnotations(objectClass);
+			objectClass = objectClass.getSuperclass();
+		} while (objectClass != null);
+
+		invocation.proceed();
+	}
+
+	@Override
+	public void interceptBeforeEachMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
+		setPropertiesByAnnotations();
+		invocation.proceed();
+	}
+
+	@Override
 	public void interceptTestMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
-		List<TestProperty> annotations = new ArrayList<>(CLASS_ANNOTATIONS);
-		addTestSpecificAnnotations(annotations, invocationContext);
+		addTestSpecificAnnotations(invocationContext);
 
 		try {
-			setPropertiesByAnnotations(annotations);
+			setPropertiesByAnnotations();
 			invocation.proceed();
 		} finally {
-			annotations.forEach(annotation -> {
+			getClassAndMethodAnnotations().forEach(annotation -> {
 				String originalValue = originalProperties.get(annotation.key());
 				if (originalValue != null) {
 					System.setProperty(annotation.key(), originalValue);
@@ -77,6 +95,8 @@ public class TestPropertyExtension implements InvocationInterceptor {
 					refreshConfig();
 				}
 			});
+
+			testMethodAnnotations.clear();
 		}
 
 	}
@@ -93,13 +113,13 @@ public class TestPropertyExtension implements InvocationInterceptor {
 		}
 	}
 
-	private void addTestSpecificAnnotations(@NotNull List<TestProperty> annotations, @NotNull ReflectiveInvocationContext<Method> invocationContext) {
-		annotations.addAll(Arrays.stream(invocationContext.getExecutable().getAnnotations())
+	private void addTestSpecificAnnotations(@NotNull ReflectiveInvocationContext<Method> invocationContext) {
+		testMethodAnnotations.addAll(Arrays.stream(invocationContext.getExecutable().getAnnotations())
 				.filter(annotation -> annotation.annotationType().isAssignableFrom(TestProperty.class))
 				.map(annotation -> (TestProperty) annotation)
 				.collect(Collectors.toList()));
 
-		annotations.addAll(Arrays.stream(invocationContext.getExecutable().getAnnotations())
+		testMethodAnnotations.addAll(Arrays.stream(invocationContext.getExecutable().getAnnotations())
 				.filter(annotation -> annotation.annotationType().isAssignableFrom(TestProperties.class))
 				.flatMap(testAnnotations -> Arrays.stream(((TestProperties) testAnnotations).value()))
 				.collect(Collectors.toList()));
@@ -131,6 +151,12 @@ public class TestPropertyExtension implements InvocationInterceptor {
 			e.printStackTrace();
 			HAS_CONFIG_CLASS.set(false);
 		}
+	}
+
+	private List<TestProperty> getClassAndMethodAnnotations() {
+		List<TestProperty> classAndMethodAnnotations = new ArrayList<>(CLASS_ANNOTATIONS);
+		classAndMethodAnnotations.addAll(this.testMethodAnnotations);
+		return classAndMethodAnnotations;
 	}
 
 }

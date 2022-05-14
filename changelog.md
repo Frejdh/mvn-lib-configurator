@@ -1,11 +1,15 @@
 # Changelog
 Changes for each version.
 
-## 2.1.0 (Not released)
+## 2.2.0 (Not released)
 - #### TODO: Variable substitution for `${example.my-variable:default-value}` syntax.
-- Split `getMap` into `getHashMap` and `getMultiMap` methods.
-- Fixed bug where to many entries could appear in a fetched map.
-- Added optional class conversion parameters for `getMap` and `getList`.
+
+## 2.1.0
+- Split `getMap` into `getSimpleMap`, `getMultiMap` and `getFlattenedMultiMap` methods.
+- Added `ConversionUtils.flattenMap` static method.
+- Fixed bug where entries could be missing appear in a fetched map.
+- Added optional class conversion parameters for `getMap` implementations and `getList`.
+- Added `BeforeEach` and `BeforeAll` support for `TestProperty` annotations (testing module).
 
 ## 2.0.0 
 - Added `getMap` and `getObject` implementations.
