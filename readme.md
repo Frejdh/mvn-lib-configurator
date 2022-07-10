@@ -23,7 +23,7 @@ Other than the loaded environmental variables, the following files are always at
     <dependency>
         <groupId>com.frejdh.util.environment</groupId>
         <artifactId>configurator</artifactId>
-        <version>2.0.0</version>
+        <version>2.1.0</version>
     </dependency>
 </dependencies>
 
